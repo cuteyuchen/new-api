@@ -20,6 +20,8 @@ import { ChevronRight, Copy } from 'lucide-react'
 import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { ModelChannelList } from '@/features/model-status/components/model-channel-list'
+import type { ModelChannelHealth } from '@/features/model-status/types'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
@@ -45,6 +47,7 @@ export interface ModelCardProps {
   showRechargePrice?: boolean
   selectedGroup?: string
   perf?: ModelPerfBadgeData
+  channels?: ModelChannelHealth[]
 }
 
 export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
@@ -244,6 +247,10 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
       <p className='text-muted-foreground mt-2 line-clamp-1 flex-1 text-[13px] leading-relaxed sm:mt-4 sm:line-clamp-2 sm:min-h-[2.5rem]'>
         {props.model.description || t('No description available.')}
       </p>
+
+      <div className='mt-2 sm:mt-3'>
+        <ModelChannelList channels={props.channels ?? []} variant='compact' />
+      </div>
 
       {/* Footer: left metadata and right performance summary share row alignment */}
       <div className='mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 sm:mt-4'>

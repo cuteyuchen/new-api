@@ -99,6 +99,15 @@ export async function updateApiKeyStatus(
   return res.data
 }
 
+// Update only the group so a stale table row cannot overwrite other key settings.
+export async function updateApiKeyGroup(
+  id: number,
+  group: string
+): Promise<ApiResponse<ApiKey>> {
+  const res = await api.put('/api/token/?group_only=true', { id, group })
+  return res.data
+}
+
 // Fetch the real (unmasked) key for a token by ID
 export async function fetchTokenKey(
   id: number

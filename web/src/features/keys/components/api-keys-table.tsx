@@ -53,6 +53,7 @@ import {
   ERROR_MESSAGES,
 } from '../constants'
 import type { ApiKey } from '../types'
+import { ApiKeyGroupQuickSwitcher } from './api-key-group-quick-switcher'
 import { ApiKeyCell, UnlimitedQuotaBadge } from './api-keys-cells'
 import { useApiKeysColumns } from './api-keys-columns'
 import { useApiKeys } from './api-keys-provider'
@@ -178,6 +179,11 @@ function ApiKeysMobileList({
                   </span>
                 </span>
               )}
+            </div>
+
+            <div className='flex min-w-0 items-center justify-between gap-2 text-xs'>
+              <span className='text-muted-foreground'>{t('Group')}</span>
+              <ApiKeyGroupQuickSwitcher apiKey={apiKey} />
             </div>
           </div>
         )

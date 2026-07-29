@@ -22,6 +22,8 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { getModelStatus } from '@/features/model-status/api'
+import type { ModelChannelHealth } from '@/features/model-status/types'
 import { getPerfMetricsSummary } from '@/features/performance-metrics/api'
 
 import { DEFAULT_PRICING_PAGE_SIZE, DEFAULT_TOKEN_UNIT } from '../constants'
@@ -53,6 +55,13 @@ export function ModelCardGrid(props: ModelCardGridProps) {
     staleTime: 60 * 1000,
     retry: false,
   })
+  const modelStatusQuery = useQuery({
+    queryKey: ['public-model-status'],
+    queryFn: getModelStatus,
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+    retry: false,
+  })
 
   const pagedModels = useMemo(() => {
     const start = (currentPage - 1) * pageSize
@@ -66,6 +75,13 @@ export function ModelCardGrid(props: ModelCardGridProps) {
     }
     return map
   }, [perfQuery.data])
+  const channelMap = useMemo(() => {
+    const map = new Map<string, ModelChannelHealth[]>()
+    for (const model of modelStatusQuery.data?.models ?? []) {
+      map.set(model.name, model.channels ?? [])
+    }
+    return map
+  }, [modelStatusQuery.data])
 
   if (props.models.length === 0) {
     return null
@@ -84,6 +100,7 @@ export function ModelCardGrid(props: ModelCardGridProps) {
             showRechargePrice={props.showRechargePrice}
             selectedGroup={props.selectedGroup}
             perf={perfMap.get(model.model_name || '')}
+            channels={channelMap.get(model.model_name || '')}
             onClick={() => props.onModelClick(model.model_name || '')}
           />
         ))}

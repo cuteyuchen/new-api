@@ -1,0 +1,29 @@
+# Deployment-only build: the frontend has already passed the local production build.
+ARG RUNTIME_IMAGE=cuteyuchen/new-api:v1.0.0-rc.22-status
+
+FROM golang:1.26.1-alpine@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 AS builder
+ENV GO111MODULE=on CGO_ENABLED=0 GOEXPERIMENT=greenteagc
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64}
+ENV GOPROXY=${GOPROXY}
+
+WORKDIR /build
+COPY go.mod go.sum ./
+# The monitored server reaches module mirrors through a long-lived proxy chain;
+# retain completed downloads and retry only transient EOF failures.
+RUN --mount=type=cache,target=/go/pkg/mod \
+    for attempt in $(seq 1 8); do \
+      go mod download && exit 0; \
+      [ "$attempt" -eq 8 ] || sleep 2; \
+    done; \
+    exit 1
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags "-s -w -X 'github.com/QuantumNous/new-api/common.Version=$(cat VERSION)'" -o new-api
+
+FROM ${RUNTIME_IMAGE}
+COPY --from=builder /build/new-api /new-api

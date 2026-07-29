@@ -16,6 +16,8 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -503,6 +505,46 @@ func TestUpdateTokenMasksKeyInResponse(t *testing.T) {
 	if strings.Contains(recorder.Body.String(), token.Key) {
 		t.Fatalf("update response leaked raw token key: %s", recorder.Body.String())
 	}
+}
+
+func TestUpdateTokenGroupOnlyPreservesOtherSettings(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	token := seedToken(t, db, 1, "quick-switch-token", "grouponly12345678")
+	allowIps := "127.0.0.1"
+	token.ExpiredTime = 1_900_000_000
+	token.RemainQuota = 789
+	token.UnlimitedQuota = false
+	token.ModelLimitsEnabled = true
+	token.ModelLimits = "gpt-5,glm-5"
+	token.AllowIps = &allowIps
+	token.CrossGroupRetry = true
+	token.Group = "auto"
+	require.NoError(t, db.Save(token).Error)
+
+	ctx, recorder := newAuthenticatedContext(
+		t,
+		http.MethodPut,
+		"/api/token/?group_only=true",
+		map[string]any{"id": token.Id, "group": "free"},
+		1,
+	)
+	UpdateToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	require.True(t, response.Success, response.Message)
+
+	var updated model.Token
+	require.NoError(t, db.First(&updated, token.Id).Error)
+	assert.Equal(t, "free", updated.Group)
+	assert.Equal(t, token.Name, updated.Name)
+	assert.Equal(t, token.ExpiredTime, updated.ExpiredTime)
+	assert.Equal(t, token.RemainQuota, updated.RemainQuota)
+	assert.Equal(t, token.UnlimitedQuota, updated.UnlimitedQuota)
+	assert.Equal(t, token.ModelLimitsEnabled, updated.ModelLimitsEnabled)
+	assert.Equal(t, token.ModelLimits, updated.ModelLimits)
+	require.NotNil(t, updated.AllowIps)
+	assert.Equal(t, allowIps, *updated.AllowIps)
+	assert.Equal(t, token.CrossGroupRetry, updated.CrossGroupRetry)
 }
 
 func TestGetTokenKeyRequiresOwnershipAndReturnsFullKey(t *testing.T) {

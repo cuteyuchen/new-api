@@ -250,6 +250,7 @@ func DeleteToken(c *gin.Context) {
 func UpdateToken(c *gin.Context) {
 	userId := c.GetInt("id")
 	statusOnly := c.Query("status_only")
+	groupOnly := c.Query("group_only")
 	token := model.Token{}
 	err := c.ShouldBindJSON(&token)
 	if err != nil {
@@ -288,6 +289,9 @@ func UpdateToken(c *gin.Context) {
 	}
 	if statusOnly != "" {
 		cleanToken.Status = token.Status
+	} else if groupOnly != "" {
+		// Keep all quota, expiry, model, and IP settings intact for quick group switches.
+		cleanToken.Group = token.Group
 	} else {
 		// If you add more fields, please also update token.Update()
 		cleanToken.Name = token.Name

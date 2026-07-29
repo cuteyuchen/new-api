@@ -79,6 +79,9 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Model Square'), href: '/pricing', requiresAuth })
   }
 
+  // The page exposes aggregate health only, so it is safe for public access.
+  links.push({ title: t('Model Status'), href: '/model-status' })
+
   // Rankings
   const rankings = modules?.rankings
   if (rankings && typeof rankings === 'object' && rankings.enabled) {
