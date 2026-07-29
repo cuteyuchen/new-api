@@ -146,6 +146,20 @@ var channelAffinitySetting = ChannelAffinitySetting{
 			IncludeRuleName:       true,
 			UserAgentInclude:      nil,
 		},
+		{
+			Name:       "api key model stickiness",
+			ModelRegex: []string{"^.+$"},
+			PathRegex:  []string{"^/(v1|v1beta)/.*$"},
+			KeySources: []ChannelAffinityKeySource{
+				{Type: "context_int", Key: "token_id"},
+			},
+			TTLSeconds:         7200,
+			IncludeUsingGroup:  true,
+			IncludeModelName:   true,
+			IncludeRuleName:    true,
+			SkipRetryOnFailure: false,
+			UserAgentInclude:   nil,
+		},
 	},
 }
 

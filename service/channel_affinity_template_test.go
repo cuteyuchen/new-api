@@ -236,6 +236,50 @@ func TestGetPreferredChannelByAffinity_RequestHeaderKeySource(t *testing.T) {
 	require.Equal(t, buildChannelAffinityKeyHint(affinityValue), meta.KeyHint)
 }
 
+func TestGetPreferredChannelByAffinity_APIKeyModelStickiness(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	setting := operation_setting.GetChannelAffinitySetting()
+	require.NotNil(t, setting)
+
+	var stickyRule *operation_setting.ChannelAffinityRule
+	for i := range setting.Rules {
+		rule := &setting.Rules[i]
+		if strings.EqualFold(strings.TrimSpace(rule.Name), "api key model stickiness") {
+			stickyRule = rule
+			break
+		}
+	}
+	require.NotNil(t, stickyRule)
+	require.Equal(t, 7200, stickyRule.TTLSeconds)
+	require.False(t, stickyRule.SkipRetryOnFailure)
+
+	tokenID := int(time.Now().UnixNano()%1_000_000) + 1
+	cacheKeySuffix := buildChannelAffinityCacheKeySuffix(
+		*stickyRule, "test-model", "free", fmt.Sprintf("%d", tokenID),
+	)
+	cache := getChannelAffinityCache()
+	require.NoError(t, cache.SetWithTTL(cacheKeySuffix, 9529, time.Minute))
+	t.Cleanup(func() {
+		_, _ = cache.DeleteMany([]string{cacheKeySuffix})
+	})
+
+	rec := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(rec)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	ctx.Set("token_id", tokenID)
+
+	channelID, found := GetPreferredChannelByAffinity(ctx, "test-model", "free")
+	require.True(t, found)
+	require.Equal(t, 9529, channelID)
+
+	meta, ok := getChannelAffinityMeta(ctx)
+	require.True(t, ok)
+	require.Equal(t, "context_int", meta.KeySourceType)
+	require.Equal(t, "token_id", meta.KeySourceKey)
+	require.Equal(t, 7200, meta.TTLSeconds)
+}
+
 func TestClearCurrentChannelAffinityCache(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
