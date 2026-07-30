@@ -338,7 +338,7 @@ export function ModelStatus() {
               <div>
                 <h1 className='text-2xl font-bold'>模型状态</h1>
                 <p className='text-muted-foreground mt-1 text-sm'>
-                  每 15 分钟主动检测模型可用性，并结合近 24 小时真实请求指标
+                  按分组周期检测模型可用性，并结合近 24 小时真实请求指标
                 </p>
               </div>
             </div>
@@ -362,6 +362,19 @@ export function ModelStatus() {
               </Button>
             </div>
           </div>
+
+          <Card className='bg-muted/30 mt-4'>
+            <CardContent className='flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm'>
+              <span className='flex items-center gap-2 font-medium'>
+                <Clock3 className='size-4' />
+                探测计划
+              </span>
+              <span className='text-muted-foreground'>
+                limited 每 15 分钟；free、paid、official 每 1 小时；每天
+                00:00–07:00 暂停探测
+              </span>
+            </CardContent>
+          </Card>
 
           {statusQuery.isLoading && (
             <div className='mt-8 grid gap-4 md:grid-cols-2'>
