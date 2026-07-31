@@ -23,7 +23,7 @@ import {
   ERROR_MESSAGES,
   MODEL_FETCHABLE_TYPES,
 } from '../constants'
-import type { Channel } from '../types'
+import type { Channel, ChannelUpdatePayload } from '../types'
 import {
   CHANNEL_TYPE_ADVANCED_CUSTOM,
   advancedCustomConfigUsesRelativeUpstreamPath,
@@ -167,6 +167,9 @@ export const channelFormSchema = z
     type: z.number().min(0, ERROR_MESSAGES.REQUIRED_TYPE),
     base_url: z.string().optional(),
     key: z.string(),
+    balance_type: z.enum(['default', 'newapi', 'sub2api']),
+    balance_token: z.string().optional(),
+    clear_balance_token: z.boolean().optional(),
     openai_organization: z.string().optional(),
     models: z.string().min(1, ERROR_MESSAGES.REQUIRED_MODELS),
     group: z.array(z.string()).min(1, ERROR_MESSAGES.REQUIRED_GROUP),
@@ -349,6 +352,9 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   type: 1,
   base_url: '',
   key: '',
+  balance_type: 'default',
+  balance_token: '',
+  clear_balance_token: false,
   openai_organization: '',
   models: '',
   group: ['default'],
@@ -490,6 +496,9 @@ export function transformChannelToFormDefaults(
     type: channel.type,
     base_url: channel.base_url || '',
     key: '', // Never populate key from backend for security
+    balance_type: channel.balance_type || 'default',
+    balance_token: '', // The saved token is never returned by the backend
+    clear_balance_token: false,
     openai_organization: channel.openai_organization || '',
     models: channel.models || '',
     group: parseGroups(channel.group || 'default'),
@@ -693,6 +702,7 @@ export function transformFormDataToCreatePayload(formData: ChannelFormValues): {
   mode: 'single' | 'batch' | 'multi_to_single'
   multi_key_mode?: 'random' | 'polling'
   batch_add_set_key_prefix_2_name?: boolean
+  balance_token?: string
   channel: Partial<Channel>
 } {
   const mode = formData.multi_key_mode || 'single'
@@ -702,6 +712,7 @@ export function transformFormDataToCreatePayload(formData: ChannelFormValues): {
     type: formData.type,
     base_url: normalizeBaseUrl(formData.base_url) || null,
     key: formData.key,
+    balance_type: formData.balance_type,
     openai_organization: formData.openai_organization || null,
     models: formData.models,
     group: formatGroups(formData.group),
@@ -734,6 +745,10 @@ export function transformFormDataToCreatePayload(formData: ChannelFormValues): {
       mode === 'multi_to_single' ? formData.multi_key_type : undefined,
     batch_add_set_key_prefix_2_name:
       mode === 'batch' ? formData.batch_add_set_key_prefix_2_name : undefined,
+    balance_token:
+      formData.balance_type === 'newapi'
+        ? formData.balance_token?.trim() || undefined
+        : undefined,
     channel,
   }
 }
@@ -744,11 +759,12 @@ export function transformFormDataToCreatePayload(formData: ChannelFormValues): {
 export function transformFormDataToUpdatePayload(
   formData: ChannelFormValues,
   channelId: number
-): Partial<Channel> {
-  const payload: Partial<Channel> = {
+): ChannelUpdatePayload {
+  const payload: ChannelUpdatePayload = {
     id: channelId,
     name: formData.name,
     type: formData.type,
+    balance_type: formData.balance_type,
     base_url: normalizeBaseUrl(formData.base_url) || null,
     openai_organization: formData.openai_organization || null,
     models: formData.models,
@@ -773,9 +789,20 @@ export function transformFormDataToUpdatePayload(
     payload.key = formData.key
   }
 
+  if (formData.balance_type === 'newapi') {
+    if (formData.clear_balance_token) {
+      payload.balance_token = ''
+    } else if (formData.balance_token?.trim()) {
+      payload.balance_token = formData.balance_token.trim()
+    }
+  }
+
   // Clean up empty strings to null for optional fields
   Object.keys(payload).forEach((key) => {
-    if (payload[key as keyof typeof payload] === '') {
+    if (
+      key !== 'balance_token' &&
+      payload[key as keyof typeof payload] === ''
+    ) {
       ;(payload as Record<string, unknown>)[key] = null
     }
   })

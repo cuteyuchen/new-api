@@ -36,6 +36,9 @@ type Channel struct {
 	Other              string  `json:"other"`
 	Balance            float64 `json:"balance"` // in USD
 	BalanceUpdatedTime int64   `json:"balance_updated_time" gorm:"bigint"`
+	BalanceType        string  `json:"balance_type" gorm:"type:varchar(16);default:'default'"`
+	BalanceToken       string  `json:"-" gorm:"type:text"`
+	HasBalanceToken    bool    `json:"has_balance_token" gorm:"-"`
 	Models             string  `json:"models"`
 	Group              string  `json:"group" gorm:"type:varchar(64);default:'default'"`
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
@@ -596,6 +599,26 @@ func (channel *Channel) UpdateBalance(balance float64) {
 	if err != nil {
 		common.SysLog(fmt.Sprintf("failed to update balance: channel_id=%d, error=%v", channel.Id, err))
 	}
+}
+
+// UpdateBalanceAndUsedQuota stores upstream account amounts in local display units.
+func (channel *Channel) UpdateBalanceAndUsedQuota(balance float64, usedQuota int64) error {
+	updatedTime := common.GetTimestamp()
+	err := DB.Model(channel).Select("balance_updated_time", "balance", "used_quota").Updates(Channel{
+		BalanceUpdatedTime: updatedTime,
+		Balance:            balance,
+		UsedQuota:          usedQuota,
+	}).Error
+	if err == nil {
+		channel.BalanceUpdatedTime = updatedTime
+		channel.Balance = balance
+		channel.UsedQuota = usedQuota
+	}
+	return err
+}
+
+func (channel *Channel) UpdateBalanceToken(token string) error {
+	return DB.Model(channel).Update("balance_token", token).Error
 }
 
 func (channel *Channel) Delete() error {

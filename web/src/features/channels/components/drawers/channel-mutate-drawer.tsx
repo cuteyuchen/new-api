@@ -69,6 +69,7 @@ import { MultiSelect } from '@/components/multi-select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Combobox } from '@/components/ui/combobox'
 import {
   Form,
@@ -718,6 +719,8 @@ export function ChannelMutateDrawer({
   const currentStatus = form.watch('status')
   const currentBaseUrl = form.watch('base_url')
   const currentKey = form.watch('key')
+  const currentBalanceType = form.watch('balance_type')
+  const clearBalanceToken = form.watch('clear_balance_token')
   const currentOther = form.watch('other')
   const currentModels = form.watch('models')
   const currentName = form.watch('name')
@@ -3067,6 +3070,135 @@ export function ChannelMutateDrawer({
                                   )
                                 }}
                               />
+
+                              <FormField
+                                control={form.control}
+                                name='balance_type'
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      {t('Upstream billing type')}
+                                    </FormLabel>
+                                    <Select
+                                      items={[
+                                        {
+                                          value: 'default',
+                                          label: t('Provider default'),
+                                        },
+                                        {
+                                          value: 'newapi',
+                                          label: 'NewAPI',
+                                        },
+                                        {
+                                          value: 'sub2api',
+                                          label: 'Sub2API',
+                                        },
+                                      ]}
+                                      value={field.value}
+                                      onValueChange={field.onChange}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent
+                                        alignItemWithTrigger={false}
+                                      >
+                                        <SelectGroup>
+                                          <SelectItem value='default'>
+                                            {t('Provider default')}
+                                          </SelectItem>
+                                          <SelectItem value='newapi'>
+                                            NewAPI
+                                          </SelectItem>
+                                          <SelectItem value='sub2api'>
+                                            Sub2API
+                                          </SelectItem>
+                                        </SelectGroup>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormDescription>
+                                      {t(
+                                        'Select NewAPI or Sub2API to query real upstream balance and usage.'
+                                      )}
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {currentBalanceType === 'newapi' && (
+                                <div className='space-y-3'>
+                                  <FormField
+                                    control={form.control}
+                                    name='balance_token'
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>
+                                          {t('Balance query token')}
+                                        </FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            type='password'
+                                            autoComplete='new-password'
+                                            placeholder={
+                                              isEditing
+                                                ? t(
+                                                    'Leave empty to keep existing balance token'
+                                                  )
+                                                : t(
+                                                    'Enter the upstream NewAPI system access token'
+                                                  )
+                                            }
+                                            disabled={
+                                              sensitiveLocked ||
+                                              clearBalanceToken
+                                            }
+                                            {...field}
+                                          />
+                                        </FormControl>
+                                        <FormDescription>
+                                          {currentRow?.has_balance_token
+                                            ? t(
+                                                'A balance query token is configured. It is never displayed or used for model requests.'
+                                              )
+                                            : t(
+                                                'Used only for the upstream /api/user/self balance query, not for model requests.'
+                                              )}
+                                        </FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+
+                                  {isEditing &&
+                                    currentRow?.has_balance_token && (
+                                      <FormField
+                                        control={form.control}
+                                        name='clear_balance_token'
+                                        render={({ field }) => (
+                                          <FormItem className='flex items-center gap-2'>
+                                            <FormControl>
+                                              <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={(checked) =>
+                                                  field.onChange(!!checked)
+                                                }
+                                                disabled={sensitiveLocked}
+                                              />
+                                            </FormControl>
+                                            <FormLabel className='font-normal'>
+                                              {t(
+                                                'Clear the saved balance query token'
+                                              )}
+                                            </FormLabel>
+                                          </FormItem>
+                                        )}
+                                      />
+                                    )}
+                                </div>
+                              )}
 
                               {currentType === 57 && (
                                 <div className='border-border/60 flex flex-col gap-3 border-y py-4'>

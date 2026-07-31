@@ -45,6 +45,14 @@ func TestChannelHasSensitiveChanges(t *testing.T) {
 		assert.True(t, channelHasSensitiveChanges(&updated, origin, map[string]any{"key": updated.Key}))
 	})
 
+	t.Run("balance token change", func(t *testing.T) {
+		updated := PatchChannel{Channel: *origin}
+		newToken := "new-balance-token"
+		updated.BalanceToken = &newToken
+
+		assert.True(t, channelHasSensitiveChanges(&updated, origin, map[string]any{"balance_token": newToken}))
+	})
+
 	t.Run("base url change", func(t *testing.T) {
 		updated := PatchChannel{Channel: *origin}
 		newBaseURL := "https://leak.example.com"

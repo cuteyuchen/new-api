@@ -50,6 +50,8 @@ export const channelSchema = z.object({
   other: z.string().default(''),
   balance: z.number().default(0), // in USD
   balance_updated_time: z.number(),
+  balance_type: z.enum(['default', 'newapi', 'sub2api']).default('default'),
+  has_balance_token: z.boolean().default(false),
   models: z.string().default(''),
   group: z.string().default('default'),
   used_quota: z.number().default(0),
@@ -74,6 +76,10 @@ export const channelSchema = z.object({
 })
 
 export type Channel = z.infer<typeof channelSchema>
+
+export type ChannelUpdatePayload = Partial<Channel> & {
+  balance_token?: string
+}
 
 // ============================================================================
 // Channel Settings Types
@@ -194,6 +200,7 @@ export interface ChannelBalanceResponse {
   success: boolean
   message?: string
   balance?: number
+  used_quota?: number
   currency?: string
 }
 
@@ -373,5 +380,6 @@ export interface AddChannelRequest {
   mode: 'single' | 'batch' | 'multi_to_single'
   multi_key_mode?: 'random' | 'polling'
   batch_add_set_key_prefix_2_name?: boolean
+  balance_token?: string
   channel: Partial<Channel>
 }

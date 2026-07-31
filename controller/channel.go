@@ -65,6 +65,10 @@ func parseStatusFilter(statusParam string) int {
 }
 
 func clearChannelInfo(channel *model.Channel) {
+	channel.HasBalanceToken = strings.TrimSpace(channel.BalanceToken) != ""
+	if channel.BalanceType == "" {
+		channel.BalanceType = "default"
+	}
 	if channel.ChannelInfo.IsMultiKey {
 		channel.ChannelInfo.MultiKeyDisabledReason = nil
 		channel.ChannelInfo.MultiKeyDisabledTime = nil
@@ -480,6 +484,9 @@ func validateChannel(channel *model.Channel, isAdd bool) error {
 	if err := channel.ValidateSettings(); err != nil {
 		return fmt.Errorf("渠道额外设置[channel setting] 格式错误：%s", err.Error())
 	}
+	if channel.BalanceType != "" && channel.BalanceType != "default" && channel.BalanceType != "newapi" && channel.BalanceType != "sub2api" {
+		return fmt.Errorf("unsupported upstream billing type: %s", channel.BalanceType)
+	}
 
 	// 如果是添加操作，检查 channel 和 key 是否为空
 	if isAdd {
@@ -570,6 +577,7 @@ type AddChannelRequest struct {
 	Mode                      string                `json:"mode"`
 	MultiKeyMode              constant.MultiKeyMode `json:"multi_key_mode"`
 	BatchAddSetKeyPrefix2Name bool                  `json:"batch_add_set_key_prefix_2_name"`
+	BalanceToken              string                `json:"balance_token"`
 	Channel                   *model.Channel        `json:"channel"`
 }
 
@@ -623,6 +631,7 @@ func AddChannel(c *gin.Context) {
 	}
 
 	addChannelRequest.Channel.CreatedTime = common.GetTimestamp()
+	addChannelRequest.Channel.BalanceToken = strings.TrimSpace(addChannelRequest.BalanceToken)
 	keys := make([]string, 0)
 	switch addChannelRequest.Mode {
 	case "multi_to_single":
@@ -927,6 +936,7 @@ type PatchChannel struct {
 	model.Channel
 	MultiKeyMode *string `json:"multi_key_mode"`
 	KeyMode      *string `json:"key_mode"` // 多key模式下密钥覆盖或者追加
+	BalanceToken *string `json:"balance_token"`
 }
 
 type ChannelStatusRequest struct {
@@ -987,6 +997,9 @@ func UpdateChannel(c *gin.Context) {
 
 	// Always copy the original ChannelInfo so that fields like IsMultiKey and MultiKeySize are retained.
 	channel.ChannelInfo = originChannel.ChannelInfo
+	if channel.BalanceToken != nil {
+		channel.Channel.BalanceToken = strings.TrimSpace(*channel.BalanceToken)
+	}
 
 	if channelHasSensitiveChanges(&channel, originChannel, requestData) &&
 		!authz.Can(c.GetInt("id"), c.GetInt("role"), authz.ChannelSensitiveWrite) {
@@ -1084,6 +1097,14 @@ func UpdateChannel(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	if channel.BalanceToken != nil {
+		requestedBalanceToken := strings.TrimSpace(*channel.BalanceToken)
+		if err := channel.Channel.UpdateBalanceToken(requestedBalanceToken); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		channel.Channel.BalanceToken = requestedBalanceToken
+	}
 	model.InitChannelCache()
 	if proxyChanged {
 		service.InvalidateProxyClient(originProxy)
@@ -1105,12 +1126,16 @@ func UpdateChannel(c *gin.Context) {
 	if channel.Key != "" && channel.Key != originChannel.Key {
 		changedFields = append(changedFields, "key")
 	}
+	if channel.BalanceToken != nil && strings.TrimSpace(*channel.BalanceToken) != originChannel.BalanceToken {
+		changedFields = append(changedFields, "balance_token")
+	}
 	recordManageAudit(c, "channel.update", map[string]interface{}{
 		"id":             channel.Id,
 		"name":           channel.Name,
 		"changed_fields": changedFields,
 	})
 	channel.Key = ""
+	channel.BalanceToken = nil
 	clearChannelInfo(&channel.Channel)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

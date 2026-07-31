@@ -34,7 +34,7 @@ import {
   transformFormDataToUpdatePayload,
   type ChannelFormValues,
 } from '../lib'
-import type { Channel } from '../types'
+import type { Channel, ChannelUpdatePayload } from '../types'
 
 type UseChannelMutateFormParams = {
   currentRow?: Channel | null
@@ -46,6 +46,7 @@ type UseChannelMutateFormParams = {
 const SENSITIVE_UPDATE_FIELDS = [
   'type',
   'key',
+  'balance_token',
   'base_url',
   'openai_organization',
   'param_override',
@@ -53,7 +54,7 @@ const SENSITIVE_UPDATE_FIELDS = [
   'setting',
   'settings',
   'other',
-] satisfies (keyof Channel)[]
+] satisfies (keyof ChannelUpdatePayload)[]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null

@@ -1,6 +1,10 @@
 package controller
 
-import "github.com/QuantumNous/new-api/model"
+import (
+	"strings"
+
+	"github.com/QuantumNous/new-api/model"
+)
 
 func channelHasSensitiveChanges(channel *PatchChannel, origin *model.Channel, requestData map[string]any) bool {
 	if _, ok := requestData["type"]; ok && channel.Type != origin.Type {
@@ -31,6 +35,9 @@ func channelHasSensitiveChanges(channel *PatchChannel, origin *model.Channel, re
 		return true
 	}
 	if _, ok := requestData["key_mode"]; ok && channel.KeyMode != nil {
+		return true
+	}
+	if _, ok := requestData["balance_token"]; ok && channel.BalanceToken != nil && strings.TrimSpace(*channel.BalanceToken) != origin.BalanceToken {
 		return true
 	}
 	// Fail closed: any field present in the request that is neither a known
@@ -71,6 +78,7 @@ var channelSensitiveFields = map[string]struct{}{
 	"other":               {},
 	"settings":            {},
 	"key_mode":            {},
+	"balance_token":       {},
 }
 
 // channelOperationalFields lists fields managed by operation endpoints instead
@@ -87,6 +95,7 @@ var channelReadOnlyFields = map[string]struct{}{
 	"response_time":        {},
 	"balance":              {},
 	"balance_updated_time": {},
+	"has_balance_token":    {},
 	"used_quota":           {},
 }
 
@@ -131,6 +140,7 @@ var channelNonSensitiveFields = map[string]struct{}{
 	"other_info":          {},
 	"tag":                 {},
 	"remark":              {},
+	"balance_type":        {},
 	"channel_info":        {},
 	"multi_key_mode":      {},
 }
