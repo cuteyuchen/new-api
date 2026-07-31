@@ -12,13 +12,14 @@ ENV GO111MODULE=on CGO_ENABLED=0
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64}
 ENV GOEXPERIMENT=greenteagc
 
 WORKDIR /build
 
 ADD go.mod go.sum ./
-RUN go mod download
+RUN GOPROXY=${GOPROXY} go mod download
 
 COPY . .
 COPY --from=builder /build/web/dist ./web/dist
