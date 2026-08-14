@@ -184,7 +184,7 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
           </div>
         )
       },
-      size: 160,
+      size: 220,
       meta: { mobileHidden: true },
     },
     {
